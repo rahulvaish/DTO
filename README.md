@@ -123,3 +123,40 @@ public class Main {
 }
 
 ```
+
+
+```
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public class DBConnectivityCheck {
+    public static void main(String[] args) {
+        // Define connection parameters
+        String dbUrl = "jdbc:mysql://localhost:3306/your_database_name";
+        String username = "your_username";
+        String password = "your_password";
+
+        // Try to establish a database connection
+        try {
+            // Load the JDBC driver for your database
+            Class.forName("com.mysql.cj.jdbc.Driver");
+
+            // Establish the database connection
+            Connection connection = DriverManager.getConnection(dbUrl, username, password);
+
+            // If the connection is successful, print a success message
+            System.out.println("Database connection successful.");
+
+            // Don't forget to close the connection when done
+            connection.close();
+        } catch (ClassNotFoundException e) {
+            System.err.println("Error: JDBC driver not found.");
+        } catch (SQLException e) {
+            System.err.println("Error: Database connection failed.");
+            e.printStackTrace();
+        }
+    }
+}
+
+```
