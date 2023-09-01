@@ -68,3 +68,58 @@ public class Main {
 
 
 ```
+
+
+```
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.annotations.SerializedName;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+class Item {
+    @SerializedName("name")
+    private String name;
+
+    @SerializedName("date")
+    private String date;
+
+    @SerializedName("ludt")
+    private String ludt;
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public String getLudt() {
+        return ludt;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        String json = "[{\"name\":\"Rahul\",\"date\":\"2021-01-01\",\"ludt\":\"2021-01-01T23:11:12.779374\"}]";
+
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        gsonBuilder.registerTypeAdapter(LocalDateTime.class, (JsonDeserializer<LocalDateTime>) (jsonElement, type, jsonDeserializationContext) ->
+                LocalDateTime.parse(jsonElement.getAsString(), DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        );
+        Gson gson = gsonBuilder.create();
+
+        Item[] items = gson.fromJson(json, Item[].class);
+
+        for (Item item : items) {
+            System.out.println("Name: " + item.getName());
+            System.out.println("Date: " + item.getDate());
+            System.out.println("LUDT: " + item.getLudt());
+        }
+    }
+}
+
+```
