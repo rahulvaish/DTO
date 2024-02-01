@@ -215,3 +215,40 @@ public List<TradeEvent> findTradeEvents(String bookId, String securityId, List<S
         return mongoTemplate.aggregate(aggregation, "TradeEvent", TradeEvent.class).getMappedResults();
     }
 ```
+```
+**ListTradeIdsSinceLastEOD**
+
+SELECT DISTINCT t1.tradeId FROM TradeEvent t1 WHERE t1.bookId=? AND t1.securityId=? AND t1.eventType != 'EODPosition' AND t1.LastUpdate >= (SELECT MAX(t2.LastUpdate) FROM TradeEvent t2 WHERE t1.BookId = t2.BookId AND t1.securityId=t2.securityId AND t2.eventType='EODPosition') OR 0=(SELECT COUNT(t3.securityId) FROM TradeEvent t3 where t1.bookId = t3.bookId AND t1.securityId=t3.securityId AND t3.eventType='EODPosition')
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.stereotype.Service;
+import java.util.List;
+
+@Service
+public class TradeEventService {
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
+    public List<String> findDistinctTradeIds(String bookId, String securityId) {
+        Aggregation aggregation = Aggregation.newAggregation(
+            Aggregation.match(Criteria.where("bookId").is(bookId)
+                .and("securityId").is(securityId)
+                .and("eventType").ne("EODPosition")),
+            Aggregation.group("tradeId").addToSet("tradeId").as("tradeIds"),
+            Aggregation.lookup("TradeEvent", "bookId", "bookId", "tradeEvents"),
+            Aggregation.addFields().addFieldWithValue("maxLastUpdate", Aggregation.max("LastUpdate").as("maxLastUpdate")),
+            Aggregation.match(Criteria.where("LastUpdate").gte(Aggregation.getField("maxLastUpdate"))),
+            Aggregation.project("tradeIds").and("tradeEvents").size().as("count"),
+            Aggregation.match(Criteria.where("count").is(0)),
+            Aggregation.project("tradeIds")
+        );
+
+        AggregationResults<String> results = mongoTemplate.aggregate(aggregation, "TradeEvent", String.class);
+        return results.getMappedResults();
+    }
+}
+
+```
