@@ -160,3 +160,45 @@ public class DBConnectivityCheck {
 }
 
 ```
+
+```
+SELECT * from TradeEvent t1 where t1.bookId=? and t1.securityId=? and t1.lastUpdate >= (SELECT MAX(t2.lastUpdate) from TradeEvent t2 where t2.bookId=? and t2.securityId=? and t1.securityId=t2.securityId and eventType='EODPosition' AND LastUpdate <?) ORDER BY securityId, tradeId, version 
+
+@Autowired
+    private MongoTemplate mongoTemplate;
+
+    public List<TradeEvent> findTradeEvents(String bookId, String securityId, String maxLastUpdate) {
+        Aggregation aggregation = Aggregation.newAggregation(
+            Aggregation.match(Criteria.where("bookId").is(bookId)
+                .and("securityId").is(securityId)
+                .and("lastUpdate").gte(maxLastUpdate)),
+            Aggregation.group("securityId").last("securityId").as("securityId")
+                .last("tradeId").as("tradeId")
+                .last("version").as("version"),
+            Aggregation.sort(Sort.by("securityId", "tradeId", "version"))
+        );
+
+        AggregationResults<TradeEvent> results = mongoTemplate.aggregate(aggregation, "TradeEvent", TradeEvent.class);
+        return results.getMappedResults();
+    }
+}
+
+
+
+
+
+SELECT * from TradeEvent where bookId=? and security=? and eventType='EODPosition' ORDER BY LastUpdate DESC LIMIT 1
+
+public List<TradeEvent> findLatestTradeEvent(String bookId, String security, String eventType) {
+        MatchOperation match = Aggregation.match(Criteria.where("bookId").is(bookId)
+                .and("security").is(security)
+                .and("eventType").is("EODPosition"));
+
+        SortOperation sort = Aggregation.sort(Sort.by(Sort.Direction.DESC, "LastUpdate"));
+
+        Aggregation aggregation = Aggregation.newAggregation(match, sort, Aggregation.limit(1));
+
+        return mongoTemplate.aggregate(aggregation, "TradeEvent", TradeEvent.class).getMappedResults();
+    }
+
+```
