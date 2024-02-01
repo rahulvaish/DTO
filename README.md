@@ -201,4 +201,17 @@ public List<TradeEvent> findLatestTradeEvent(String bookId, String security, Str
         return mongoTemplate.aggregate(aggregation, "TradeEvent", TradeEvent.class).getMappedResults();
     }
 
+
+
+SELECT * FROM TradeEvent where bookId=:bookId AND securityId=:securityId AND tradeId IN(:id) ORDER BY securityId, tradeId, version
+public List<TradeEvent> findTradeEvents(String bookId, String securityId, List<String> tradeIds) {
+        Aggregation aggregation = Aggregation.newAggregation(
+            Aggregation.match(Criteria.where("bookId").is(bookId)
+                .and("securityId").is(securityId)
+                .and("tradeId").in(tradeIds)),
+            Aggregation.sort(Sort.by("securityId", "tradeId", "version"))
+        );
+
+        return mongoTemplate.aggregate(aggregation, "TradeEvent", TradeEvent.class).getMappedResults();
+    }
 ```
