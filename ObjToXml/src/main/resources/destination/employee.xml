@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<employee>
+    <contact>john.doe@example.com</contact>
+    <fullName>John Doe</fullName>
+    <years>30</years>
+</employee>
