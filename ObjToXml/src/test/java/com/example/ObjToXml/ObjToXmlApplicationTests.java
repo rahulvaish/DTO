@@ -1,13 +1,13 @@
-
-package com.example;
+package com.example.ObjToXml;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest(classes = SampleJaxBConverterApplication.class)
-class SampleJaxBConverterApplicationTests {
+@SpringBootTest
+class ObjToXmlApplicationTests {
 
 	@Test
 	void contextLoads() {
 	}
+
 }
