@@ -1,6 +1,11 @@
 # DTO
 ```
+mvn install:install-file -Dfile=path/to/your.jar -DgroupId=com.example -DartifactId=your-artifact-id -Dversion=1.0 -Dpackaging=jar
 
+```
+
+
+```
 package com.example.ObjToXml;
 
 import com.example.generated.Employee;
