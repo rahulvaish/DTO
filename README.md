@@ -1,4 +1,26 @@
 # DTO
+
+```
+public static void main(String[] args) {
+        try {
+            // Using File
+            File file = new File("src/main/resources/sample-message.xml");
+            XmlMapper xmlMapper = new XmlMapper();
+            Person personFromFile = xmlMapper.readValue(file, Person.class);
+            System.out.println("Read from file: " + personFromFile);
+
+            // Using InputStream
+            try (InputStream inputStream = Files.newInputStream(Paths.get("src/main/resources/sample-message.xml"))) {
+                Person personFromInputStream = xmlMapper.readValue(inputStream, Person.class);
+                System.out.println("Read from InputStream: " + personFromInputStream);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+```
+
 ```
 package com.example;
 
