@@ -1,5 +1,39 @@
 # DTO
 ```
+package com.example;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
+
+public class MyClass {
+
+    public static void main(String[] args) {
+        try {
+            File file = getFileFromResources("sample-message.xml");
+            System.out.println("File path: " + file.getAbsolutePath());
+            // Now you can use this file object as needed
+        } catch (IOException | URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static File getFileFromResources(String fileName) throws IOException, URISyntaxException {
+        ClassLoader classLoader = MyClass.class.getClassLoader();
+        URL resource = classLoader.getResource(fileName);
+        if (resource == null) {
+            throw new IOException("File not found! " + fileName);
+        } else {
+            return new File(resource.toURI());
+        }
+    }
+}
+
+```
+
+
+```
 mvn install:install-file -Dfile=path/to/your.jar -DgroupId=com.example -DartifactId=your-artifact-id -Dversion=1.0 -Dpackaging=jar
 
 ```
