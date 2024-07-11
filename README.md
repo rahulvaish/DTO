@@ -1,54 +1,92 @@
 # DTO
 
 ```
-public static void main(String[] args) {
-        try {
-            // Using File
-            File file = new File("src/main/resources/sample-message.xml");
-            XmlMapper xmlMapper = new XmlMapper();
-            Person personFromFile = xmlMapper.readValue(file, Person.class);
-            System.out.println("Read from file: " + personFromFile);
+import com.opencsv.CSVWriter;
 
-            // Using InputStream
-            try (InputStream inputStream = Files.newInputStream(Paths.get("src/main/resources/sample-message.xml"))) {
-                Person personFromInputStream = xmlMapper.readValue(inputStream, Person.class);
-                System.out.println("Read from InputStream: " + personFromInputStream);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-
-```
-
-```
-package com.example;
-
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.util.List;
 
-public class MyClass {
+    public class XmlToCsvConverter {
 
-    public static void main(String[] args) {
-        try {
-            File file = getFileFromResources("sample-message.xml");
-            System.out.println("File path: " + file.getAbsolutePath());
-            // Now you can use this file object as needed
-        } catch (IOException | URISyntaxException e) {
-            e.printStackTrace();
+        public static Employees unmarshal(File file) throws JAXBException {
+            JAXBContext context = JAXBContext.newInstance(Employees.class);
+            Unmarshaller unmarshaller = context.createUnmarshaller();
+            return (Employees) unmarshaller.unmarshal(file);
+        }
+
+        public static void writeCsv(Employees employees, String csvFilePath) throws IOException {
+            try (CSVWriter writer = new CSVWriter(new FileWriter(csvFilePath))) {
+                String[] header = {"ID", "Name", "Role"};
+                writer.writeNext(header);
+
+                List<Employee> employeeList = employees.getEmployees();
+                for (Employee employee : employeeList) {
+                    String[] data = {String.valueOf(employee.getId()), employee.getName(), employee.getRole()};
+                    writer.writeNext(data);
+                }
+            }
+        }
+
+        public static void main(String[] args) {
+            try {
+                File xmlFile = new File("src/main/resources/employees.xml");
+                Employees employees = unmarshal(xmlFile);
+                writeCsv(employees, "src/main/resources/employees.csv");
+            } catch (JAXBException | IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    private static File getFileFromResources(String fileName) throws IOException, URISyntaxException {
-        ClassLoader classLoader = MyClass.class.getClassLoader();
-        URL resource = classLoader.getResource(fileName);
-        if (resource == null) {
-            throw new IOException("File not found! " + fileName);
-        } else {
-            return new File(resource.toURI());
-        }
+
+
+```
+
+
+```
+
+
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+import java.util.List;
+
+@XmlType(propOrder = {"id", "name", "role"})
+public class Employee {
+    private int id;
+    private String name;
+    private String role;
+
+    public int getId() {
+        return id;
+    }
+
+    @XmlElement
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    @XmlElement
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    @XmlElement
+    public void setRole(String role) {
+        this.role = role;
     }
 }
 
@@ -56,61 +94,61 @@ public class MyClass {
 
 
 ```
-mvn install:install-file -Dfile=path/to/your.jar -DgroupId=com.example -DartifactId=your-artifact-id -Dversion=1.0 -Dpackaging=jar
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+import java.util.List;
 
-```
+@XmlRootElement(name = "employees")
+public class Employees {
+    private List<Employee> employees;
 
-
-```
-package com.example.ObjToXml;
-
-import com.example.generated.Employee;
-import com.example.generated.Person;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.io.File;
-
-@RestController
-public class AppController {
-
-    @GetMapping("/transformPersonToEmployee")
-    public String transformPersonToEmployee() {
-        try {
-            // Create an XmlMapper instance
-            XmlMapper xmlMapper = new XmlMapper();
-
-            // Read and deserialize the person.xml file into a Person object
-            File personFile = new File("src/main/resources/source/person.xml");
-            Person person = xmlMapper.readValue(personFile, Person.class);
-
-            // Transform data from Person to Employee
-            Employee employee = transformPersonToEmployee(person);
-
-            // Serialize the Employee object to XML and save to a file
-            File employeeFile = new File("src/main/resources/destination/employee.xml");
-            xmlMapper.writeValue(employeeFile, employee);
-
-            // Serialize the Employee object to XML and print to console
-            String xmlString = xmlMapper.writeValueAsString(employee);
-            System.out.print(xmlString);
-
-            return "SUCCESS";
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "FAILURE";
-        }
+    @XmlElement(name = "employee")
+    public List<Employee> getEmployees() {
+        return employees;
     }
 
-    private Employee transformPersonToEmployee(Person person) {
-        Employee employee = new Employee();
-        employee.setFullName(person.getName());
-        employee.setYears(person.getAge());
-        employee.setContact(person.getEmail());
-        return employee;
+    public void setEmployees(List<Employee> employees) {
+        this.employees = employees;
     }
 }
+```
 
+
+```
+<employees>
+    <employee>
+        <id>1</id>
+        <name>John Doe</name>
+        <role>Developer</role>
+    </employee>
+    <employee>
+        <id>2</id>
+        <name>Jane Smith</name>
+        <role>Manager</role>
+    </employee>
+</employees>
+
+```
+
+
+```
+<dependencies>
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>2.3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>5.4</version>
+        </dependency>
+    </dependencies>
 
 ```
