@@ -1,154 +1,118 @@
-# DTO
+```
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+@Controller
+public class AppController {
+
+    @Autowired
+    AppService appService;
+
+    @GetMapping("/api/identifyFiles/{name}")
+    public void identifyFiles(@PathVariable String name) {
+        appService.identifyFiles(name);
+    }
+}
 
 ```
-import com.opencsv.CSVWriter;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.List;
 
-    public class XmlToCsvConverter {
+```
+package com.example.RBCMLScanner;
 
-        public static Employees unmarshal(File file) throws JAXBException {
-            JAXBContext context = JAXBContext.newInstance(Employees.class);
-            Unmarshaller unmarshaller = context.createUnmarshaller();
-            return (Employees) unmarshaller.unmarshal(file);
+import org.springframework.stereotype.Service;
+
+import java.io.*;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+
+@Service
+public class AppService {
+
+    public void identifyFiles(String name){
+        // Source and destination folder paths
+        String sourceFolderPath = "/Users/rahulvaish/JunkExperiments"; // Replace with your source folder
+        String destinationFolderPath = "/Users/rahulvaish/JunkExperiments/destination"; // Replace with your destination folder
+
+        // Create destination folder if it doesn't exist
+        File destinationFolder = new File(destinationFolderPath);
+        if (!destinationFolder.exists()) {
+            destinationFolder.mkdirs();
         }
 
-        public static void writeCsv(Employees employees, String csvFilePath) throws IOException {
-            try (CSVWriter writer = new CSVWriter(new FileWriter(csvFilePath))) {
-                String[] header = {"ID", "Name", "Role"};
-                writer.writeNext(header);
+        try {
+            // Define the target date and size criteria
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH);
+            Date targetDate = dateFormat.parse("19 Sep 2024");
+            long sizeThreshold = 130L; // 5MB
 
-                List<Employee> employeeList = employees.getEmployees();
-                for (Employee employee : employeeList) {
-                    String[] data = {String.valueOf(employee.getId()), employee.getName(), employee.getRole()};
-                    writer.writeNext(data);
+
+            // Walk through the files in the source directory
+            Files.walkFileTree(Paths.get(sourceFolderPath), new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    // Check if file was created on the target date and has size > 5MB
+                    if (isTargetDate(attrs, targetDate) && attrs.size() > sizeThreshold) {
+                        // Check if it's an XML file and contains the required content
+                        if (isXmlFile(file) && containsNameTag(file, name)) {
+                            // Move the file to the destination folder
+                            moveFileToDestination(file, destinationFolderPath);
+                        }
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Check if file creation date matches target date
+    private static boolean isTargetDate(BasicFileAttributes attrs, Date targetDate) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy");
+        String fileCreationDate = dateFormat.format(new Date(attrs.creationTime().toMillis()));
+        String targetDateStr = dateFormat.format(targetDate);
+        return fileCreationDate.equals(targetDateStr);
+    }
+
+    // Check if the file is an XML file by checking its extension
+    private static boolean isXmlFile(Path file) {
+        return file.toString().toLowerCase().endsWith(".xml");
+    }
+
+    // Check if the file contains the <name>RAHUL</name> tag
+    private static boolean containsNameTag(Path file, String name) {
+        try (BufferedReader br = Files.newBufferedReader(file)) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.contains("<name>" + name + "</name>")) {
+                    return true;
                 }
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+        return false;
+    }
 
-        public static void main(String[] args) {
-            try {
-                File xmlFile = new File("src/main/resources/employees.xml");
-                Employees employees = unmarshal(xmlFile);
-                writeCsv(employees, "src/main/resources/employees.csv");
-            } catch (JAXBException | IOException e) {
-                e.printStackTrace();
-            }
+    // Move the file to the destination folder
+    private static void moveFileToDestination(Path file, String destinationFolderPath) {
+        try {
+            Path destinationPath = Paths.get(destinationFolderPath, file.getFileName().toString());
+            Files.move(file, destinationPath, StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("Moved file: " + file.getFileName() + " to " + destinationFolderPath);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-    }
-
-
-
-```
-
-
-```
-
-
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
-import java.util.List;
-
-@XmlType(propOrder = {"id", "name", "role"})
-public class Employee {
-    private int id;
-    private String name;
-    private String role;
-
-    public int getId() {
-        return id;
-    }
-
-    @XmlElement
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    @XmlElement
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    @XmlElement
-    public void setRole(String role) {
-        this.role = role;
     }
 }
 
-```
-
-
-```
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
-import java.util.List;
-
-@XmlRootElement(name = "employees")
-public class Employees {
-    private List<Employee> employees;
-
-    @XmlElement(name = "employee")
-    public List<Employee> getEmployees() {
-        return employees;
-    }
-
-    public void setEmployees(List<Employee> employees) {
-        this.employees = employees;
-    }
-}
-```
-
-
-```
-<employees>
-    <employee>
-        <id>1</id>
-        <name>John Doe</name>
-        <role>Developer</role>
-    </employee>
-    <employee>
-        <id>2</id>
-        <name>Jane Smith</name>
-        <role>Manager</role>
-    </employee>
-</employees>
-
-```
-
-
-```
-<dependencies>
-        <dependency>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
-            <version>2.3.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish.jaxb</groupId>
-            <artifactId>jaxb-runtime</artifactId>
-            <version>2.3.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.opencsv</groupId>
-            <artifactId>opencsv</artifactId>
-            <version>5.4</version>
-        </dependency>
-    </dependencies>
 
 ```
