@@ -1,5 +1,22 @@
 ```
 
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<person>
+	<human>
+    		<name>RAHUL</name>
+	</human>
+    <age>30</age>
+    <occupation>Engineer</occupation>
+</person>
+
+
+```
+
+
+```
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
