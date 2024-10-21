@@ -1,154 +1,124 @@
 # DTO
 
+
 ```
-import com.opencsv.CSVWriter;
-
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.List;
-
-    public class XmlToCsvConverter {
-
-        public static Employees unmarshal(File file) throws JAXBException {
-            JAXBContext context = JAXBContext.newInstance(Employees.class);
-            Unmarshaller unmarshaller = context.createUnmarshaller();
-            return (Employees) unmarshaller.unmarshal(file);
+<%@ page import="javax.naming.*, javax.naming.directory.*, java.util.Hashtable" %>
+<%@ page contentType="text/html" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <script>
+        function showAlert(message) {
+            alert(message);
         }
+    </script>
+</head>
+<body>
 
-        public static void writeCsv(Employees employees, String csvFilePath) throws IOException {
-            try (CSVWriter writer = new CSVWriter(new FileWriter(csvFilePath))) {
-                String[] header = {"ID", "Name", "Role"};
-                writer.writeNext(header);
+    <h2>Login Page</h2>
 
-                List<Employee> employeeList = employees.getEmployees();
-                for (Employee employee : employeeList) {
-                    String[] data = {String.valueOf(employee.getId()), employee.getName(), employee.getRole()};
-                    writer.writeNext(data);
-                }
-            }
-        }
+    <form method="post">
+        Username: <input type="text" name="username" required /><br/><br/>
+        Password: <input type="password" name="password" required /><br/><br/>
+        <input type="submit" value="Login" />
+    </form>
 
-        public static void main(String[] args) {
+    <%
+        // Check if form was submitted
+        if ("POST".equalsIgnoreCase(request.getMethod())) {
+            String username = request.getParameter("username");
+            String password = request.getParameter("password");
+
+            // LDAP server and authentication information
+            String ldapURL = "ldap://your-ldap-server:389"; // Change to your LDAP server URL
+            String baseDN = "dc=yourdomain,dc=com";         // Change to your base DN
+            String groupDN = "CN=YourGroup,OU=Groups,DC=yourdomain,DC=com";  // Change to your AD group DN
+
+            // LDAP environment setup
+            Hashtable<String, String> env = new Hashtable<String, String>();
+            env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
+            env.put(Context.PROVIDER_URL, ldapURL);
+            env.put(Context.SECURITY_AUTHENTICATION, "simple");
+            env.put(Context.SECURITY_PRINCIPAL, "yourdomain\\" + username);  // Use domain\username format
+            env.put(Context.SECURITY_CREDENTIALS, password);
+
             try {
-                File xmlFile = new File("src/main/resources/employees.xml");
-                Employees employees = unmarshal(xmlFile);
-                writeCsv(employees, "src/main/resources/employees.csv");
-            } catch (JAXBException | IOException e) {
-                e.printStackTrace();
+                // Try to authenticate the user
+                DirContext ctx = new InitialDirContext(env);
+
+                // Search to see if the user belongs to the required group
+                String searchFilter = "(&(objectClass=user)(sAMAccountName=" + username + "))";
+                SearchControls searchControls = new SearchControls();
+                searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+
+                NamingEnumeration<SearchResult> results = ctx.search(baseDN, searchFilter, searchControls);
+                if (results.hasMore()) {
+                    SearchResult result = results.next();
+                    Attributes attributes = result.getAttributes();
+
+                    // Check if user is part of the required AD group
+                    Attribute memberOf = attributes.get("memberOf");
+                    if (memberOf != null && memberOf.contains(groupDN)) {
+                        // User is authenticated and belongs to the group
+                        response.sendRedirect("success.jsp");
+                    } else {
+                        // User is authenticated but not part of the group
+                        out.println("<script>showAlert('Authentication successful, but you do not belong to the required group.');</script>");
+                    }
+                } else {
+                    // No matching user found in LDAP
+                    out.println("<script>showAlert('User not found in LDAP.');</script>");
+                }
+
+                ctx.close();
+            } catch (AuthenticationException e) {
+                // Authentication failed
+                out.println("<script>showAlert('Authentication failed. Please check your username and password.');</script>");
+            } catch (NamingException e) {
+                // LDAP error
+                out.println("<script>showAlert('LDAP error occurred: " + e.getMessage() + "');</script>");
             }
         }
-    }
+    %>
 
-
-
+</body>
+</html>
 ```
 
 
 ```
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Success</title>
+</head>
+<body>
 
+    <h2>Login Successful</h2>
+    <p>Welcome to the success page!</p>
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
-import java.util.List;
-
-@XmlType(propOrder = {"id", "name", "role"})
-public class Employee {
-    private int id;
-    private String name;
-    private String role;
-
-    public int getId() {
-        return id;
-    }
-
-    @XmlElement
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    @XmlElement
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    @XmlElement
-    public void setRole(String role) {
-        this.role = role;
-    }
-}
+</body>
+</html>
 
 ```
 
+mkdir myapp
+
+mkdir -p myapp/WEB-INF
+cd /bin
+./startup.sh
 
 ```
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
-import java.util.List;
-
-@XmlRootElement(name = "employees")
-public class Employees {
-    private List<Employee> employees;
-
-    @XmlElement(name = "employee")
-    public List<Employee> getEmployees() {
-        return employees;
-    }
-
-    public void setEmployees(List<Employee> employees) {
-        this.employees = employees;
-    }
-}
-```
-
-
-```
-<employees>
-    <employee>
-        <id>1</id>
-        <name>John Doe</name>
-        <role>Developer</role>
-    </employee>
-    <employee>
-        <id>2</id>
-        <name>Jane Smith</name>
-        <role>Manager</role>
-    </employee>
-</employees>
-
-```
-
-
-```
-<dependencies>
-        <dependency>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
-            <version>2.3.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish.jaxb</groupId>
-            <artifactId>jaxb-runtime</artifactId>
-            <version>2.3.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.opencsv</groupId>
-            <artifactId>opencsv</artifactId>
-            <version>5.4</version>
-        </dependency>
-    </dependencies>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello World JSP</title>
+</head>
+<body>
+    <h1>Hello World from JSP!</h1>
+</body>
+</html>
 
 ```
